@@ -82,30 +82,39 @@ namespace MAGESKit
                 byte token = data[i];
                 if (token < 0x80 || token == 0xFF) //command
                 {
-                    string OpCode = Enum.IsDefined(typeof(MsbOP), token) ? ((MsbOP)token).ToString() : $"OP{token:X2}";
-                    linesb.Append(OpCode);
+                    string OpCode = Enum.IsDefined(typeof(MsbOP), token) ? $"{{{(MsbOP)token}}}" : $"{{OP_{token:X2}}}";
                     switch ((MsbOP)token)
                     {
                         case MsbOP.LineBreak: i++; break;
-                        case MsbOP.NameStart: i++; break;
-                        case MsbOP.LineStart: i++; break;
-                        case MsbOP.Present: i++; break;
+                        case MsbOP.NameStart:
+                            {
+                                OpCode = "[";
+                                i++;
+                                break;
+                            }
+                        case MsbOP.NameEnd:
+                            {
+                                OpCode = "] ";
+                                i++;
+                                break;
+                            }
+                        case MsbOP.PauseEndLine: i++; break;
                         case MsbOP.SetColor:
                             {
                                 linesb.Append(BuildParams(data, i + 1, 3));
                                 i += 4;
                                 break;
                             }
-                        case MsbOP.PresentUnknown05: i++; break;
-                        case MsbOP.PresentUnknown06: i++; break;
+                        case MsbOP.OP_05: i++; break;
+                        case MsbOP.OP_06: i++; break;
                         case MsbOP.TextWait:
                             {
                                 linesb.Append(BuildParams(data, i + 1, 1));
                                 i += 2;
                                 break;
                             }
-                        case MsbOP.PresentResetAlignment: i++; break;
-                        case MsbOP.RubyBaseStart: i++; break;
+                        case MsbOP.PauseEndPage: i++; break;
+                        case MsbOP.RubyStart: i++; break;
                         case MsbOP.RubyTextStart: i++; break;
                         case MsbOP.RubyTextEnd: i++; break;
                         case MsbOP.SetFontSize:
@@ -134,7 +143,7 @@ namespace MAGESKit
                                 i += 3;
                                 break;
                             }
-                        case MsbOP.PresentUnknown14:
+                        case MsbOP.OP_14:
                             {
                                 linesb.Append(BuildParams(data, i + 1, 2));
                                 i += 3;
@@ -159,26 +168,26 @@ namespace MAGESKit
                                 linesb.Append(BuildParams(data, start, i - start));
                                 break;
                             }
-                        case MsbOP.PresentUnknown16:
+                        case MsbOP.Dictionary:
                             {
                                 linesb.Append(BuildParams(data, i + 1, 2));
                                 i += 3;
                                 break;
                             }
-                        case MsbOP.PresentUnknown18: i++; break;
-                        case MsbOP.AutoForward:
+                        case MsbOP.PauseClearPage: i++; break;
+                        case MsbOP.Auto:
                             {
                                 linesb.Append(BuildParams(data, i + 1, 2));
                                 i += 3;
                                 break;
                             }
-                        case MsbOP.AutoForward1A:
+                        case MsbOP.AutoClearPage:
                             {
                                 linesb.Append(BuildParams(data, i + 1, 2));
                                 i += 3;
                                 break;
                             }
-                        case MsbOP.PresentUnknown1B:
+                        case MsbOP.OP_1B:
                             {
                                 linesb.Append(BuildParams(data, i + 1, 1));
                                 i += 2;
@@ -187,7 +196,9 @@ namespace MAGESKit
                         case MsbOP.RubyCenterPerChar: i++; break;
                         case MsbOP.AltLineBreak: i++; break;
                         case MsbOP.END: i++; break;
+                        default: i++; break;
                     }
+                    linesb.Append(OpCode);
                 }
                 else //character
                 {
