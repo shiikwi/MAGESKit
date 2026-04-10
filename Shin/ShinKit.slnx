@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="PicTool/PicTool.csproj" />
+  <Project Path="ScriptTool/ScriptTool.csproj" Id="08b770ea-18f5-4b4d-8f7f-6c29442fcfa0" />
 </Solution>

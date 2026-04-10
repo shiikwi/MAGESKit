@@ -208,11 +208,12 @@ namespace MAGESKit
                         string Index = (data[i] << 8 | data[i + 1]).ToString();
                         if (CharSetMap.TryGetValue(Index, out var c))
                         {
+                            if (c == "") c = $"<{Index}>";
                             linesb.Append(c);
                         }
                         else
                         {
-                            linesb.Append("<?>");
+                            linesb.Append($"<{Index}>");
                         }
                         i += 2;
                     }
