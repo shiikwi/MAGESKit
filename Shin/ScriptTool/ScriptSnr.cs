@@ -86,6 +86,7 @@ namespace ScriptTool
             var outPath = Path.ChangeExtension(inPath, ".json");
             var json = JsonConvert.SerializeObject(snr, Formatting.Indented);
             File.WriteAllText(outPath, json);
+            WriteScSection(br, snrHeader.DataOffset);
         }
 
         private SnrHeader ReadHeader(BinaryReader br)
@@ -185,6 +186,87 @@ namespace ScriptTool
                 result.Add(entry);
             }
             return result;
+        }
+
+        private void WriteScSection(BinaryReader br, uint offset)
+        {
+            var sb = new StringBuilder();
+            br.BaseStream.Position = offset;
+            br.BaseStream.Position = OPRun((OPTable)br.ReadByte(), br);
+
+            MsgCandidates? lastCandidate = null;
+            uint lastId = 0;
+            var textList = new List<MsgCandidates>();
+
+            while (br.BaseStream.Position < br.BaseStream.Length)
+            {
+                long currentOpPos = br.BaseStream.Position;
+                byte op = br.ReadByte();
+                if ((OPTable)op == OPTable.MsgShow)
+                {
+                    long paramStartPos = br.BaseStream.Position;
+                    uint currentId = br.ReadUInt32();
+                    ushort strLen = br.ReadUInt16();
+                    string content = Utils.ReadScString(br, strLen);
+                    var currentCandidate = new MsgCandidates
+                    {
+                        OpPos = currentOpPos,
+                        Id = currentId,
+                        Content = content,
+                    };
+
+                    if (currentId == lastId + 1 && lastCandidate != null)
+                    {
+                        if (textList.Count == 0)
+                        {
+                            textList.Add(lastCandidate.Value);
+                        }
+                        else if (textList[textList.Count - 1].Id != lastCandidate.Value.Id)
+                        {
+                            textList.Add(lastCandidate.Value);
+                        }
+                        textList.Add(currentCandidate);
+                    }
+                    else
+                    {
+                        br.BaseStream.Position = paramStartPos + 1;
+                    }
+                    lastCandidate = currentCandidate;
+                    lastId = currentId;
+                }
+            }
+
+            foreach (var sc in textList)
+            {
+                sb.Append($"[{sc.Id}] {sc.Content}\n");
+            }
+
+            File.WriteAllText("main.snr.txt", sb.ToString());
+        }
+
+        private uint OPRun(OPTable op, BinaryReader br)
+        {
+            switch (op)
+            {
+                case OPTable.Call:
+                    var args = br.ReadUInt16();
+                    br.ReadByte();
+                    var callOffset = br.ReadUInt32();
+                    return callOffset;
+                case OPTable.Jmp:
+                    var jmpOffset = br.ReadUInt32();
+                    return jmpOffset;
+                default:
+                    return 0;
+            }
+        }
+
+
+        private struct MsgCandidates
+        {
+            public long OpPos;
+            public uint Id;
+            public string Content;
         }
     }
 }
