@@ -8,12 +8,22 @@ namespace PicTool
     {
         static void Main(string[] args)
         {
-            foreach(var arg in args)
+            foreach (var arg in args)
             {
-                var pic = new ImagePIC();
-                pic.ConvertPIC(arg);
-            }
+                var ext = Path.GetExtension(arg);
 
+                if (ext == ".pic")
+                {
+                    var pic = new ImagePIC();
+                    pic.ConvertPIC(arg);
+                }
+                else if (ext == ".txa")
+                {
+                    var txa = new ImageTXA();
+                    txa.ConvertTXA(arg);
+                }
+            }
         }
+
     }
 }
