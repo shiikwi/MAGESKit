@@ -61,12 +61,12 @@ namespace PicTool
                     throw new Exception($"Not support veriosn{version}");
 
                 var fileSize = br.ReadUInt32();
-                PICHeader header = BytesToStruct<PICHeader>(br);
+                PICHeader header = Utils.BytesToStruct<PICHeader>(br);
 
                 List<PICBlock> blocks = new List<PICBlock>();
                 for (int i = 0; i < header.BlockCount; i++)
                 {
-                    blocks.Add(BytesToStruct<PICBlock>(br));
+                    blocks.Add(Utils.BytesToStruct<PICBlock>(br));
                 }
 
                 List<Block> outBlocks = new List<Block>();
@@ -74,7 +74,7 @@ namespace PicTool
                 {
                     var block = blocks[i];
                     br.BaseStream.Seek(block.Offset, SeekOrigin.Begin);
-                    LayerHeader layer = BytesToStruct<LayerHeader>(br);
+                    LayerHeader layer = Utils.BytesToStruct<LayerHeader>(br);
 
                     int srcPitch = (layer.Width + 3) & ~3;
                     int uncompressedSize = 1024 + srcPitch * layer.Height;
@@ -195,14 +195,6 @@ namespace PicTool
                 }
                 canvas.Save(outputPath, ImageFormat.Png);
             }
-        }
-
-        private T BytesToStruct<T>(BinaryReader br) where T : struct
-        {
-            byte[] bytes = br.ReadBytes(Marshal.SizeOf(typeof(T)));
-            GCHandle handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-            try { return (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(T)); }
-            finally { handle.Free(); }
         }
 
         private struct Block
