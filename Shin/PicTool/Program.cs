@@ -22,6 +22,11 @@ namespace PicTool
                     var txa = new ImageTXA();
                     txa.ConvertTXA(arg);
                 }
+                else if (ext == ".bup")
+                {
+                    var bup = new ImageBUP();
+                    bup.ConvertBUP((arg));
+                }
             }
         }
 

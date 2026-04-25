@@ -115,7 +115,7 @@ namespace PicTool
             }
         }
 
-        private byte[] ApplyPalette(byte[] decompressed, int width, int height, int srcPitch, bool hasAlphaMap)
+        protected byte[] ApplyPalette(byte[] decompressed, int width, int height, int srcPitch, bool hasAlphaMap)
         {
             int dstPitch = (width * 4 + 3) & ~3;
             byte[] bgraData = new byte[dstPitch * height];
@@ -197,7 +197,7 @@ namespace PicTool
             }
         }
 
-        private struct Block
+        protected struct Block
         {
             public byte[] data;
             public int X;
