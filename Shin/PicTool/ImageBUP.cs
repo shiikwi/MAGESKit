@@ -20,6 +20,7 @@ namespace PicTool
         public uint Reversed;
         public uint TableOffset;
         public uint TableSize;
+        public uint Reserved1;
         public uint AuxOffset;
         public uint AuxSize;
     }
@@ -48,6 +49,21 @@ namespace PicTool
 
     public class ImageBUP : ImagePIC
     {
+        private class AuxRecord
+        {
+            public string Tag;
+            public BUPTable primary0;
+            public BUPTable primary1;
+            public List<BUPTable> list0 = new();
+            public List<BUPTable> list1 = new();
+        }
+
+        private class AuxLayout
+        {
+            public List<BUPTable> RootTables = new();
+            public AuxRecord? auxRecord;
+        }
+
         public void ConvertBUP(string filepath)
         {
             string outPath = Path.ChangeExtension(filepath, ".png");
@@ -63,7 +79,17 @@ namespace PicTool
                 }
 
                 var header = Utils.BytesToStruct<BUPHeader>(br);
-                var tables = ReadBUPTables(br, header);
+                var layout = ReadBUPTables(br, header, filepath);   
+                var tables = new List<BUPTable>();
+
+                tables.AddRange(layout.RootTables);
+                if (layout.auxRecord != null)
+                {
+                    //tables.Add(layout.auxRecord.primary0);
+                    //tables.Add(layout.auxRecord.primary1);
+                    tables.AddRange(layout.auxRecord.list0);
+                    tables.AddRange(layout.auxRecord.list1);
+                }
 
                 List<Block> blocks = new List<Block>();
                 foreach (var table in tables)
@@ -85,23 +111,73 @@ namespace PicTool
             }
         }
 
-        private List<BUPTable> ReadBUPTables(BinaryReader br, BUPHeader header)
+        private AuxLayout ReadBUPTables(BinaryReader br, BUPHeader header, string filepath)
         {
-            List<BUPTable> tables = new List<BUPTable>();
+            var tables = new AuxLayout();
 
             br.BaseStream.Position = header.TableOffset;
             uint count = br.ReadUInt32();
             for (int i = 0; i < count; i++)
             {
-                tables.Add(Utils.BytesToStruct<BUPTable>(br));
+                tables.RootTables.Add(Utils.BytesToStruct<BUPTable>(br));
             }
 
             if (header.AuxOffset != 0)
-                Console.WriteLine("Aux Read Not Implemented yet.");
+            {
+                var auxRecords = ReadAuxRecords(br, header);
+                var variantTag = GuessAuxTag(filepath);
+
+                foreach (var record in auxRecords)
+                {
+                    if (record.Tag == variantTag)
+                    {
+                        tables.auxRecord = record;
+                    }
+                }
+            }
 
             return tables;
         }
 
+        private List<AuxRecord> ReadAuxRecords(BinaryReader br, BUPHeader header)
+        {
+            var records = new List<AuxRecord>();
+
+            long auxStart = header.AuxOffset;
+            long auxEnd = header.AuxOffset + header.AuxSize;
+
+            br.BaseStream.Position = auxStart;
+            uint count = br.ReadUInt32();
+            for (int i = 0; i < count; i++)
+            {
+                var record = new AuxRecord();
+                long startPos = br.BaseStream.Position;
+                uint size = br.ReadUInt32();
+                record.primary0 = Utils.BytesToStruct<BUPTable>(br);
+                record.primary1 = Utils.BytesToStruct<BUPTable>(br);
+                ushort list0Count = br.ReadUInt16();
+                ushort list1Count = br.ReadUInt16();
+
+                record.Tag = Utils.ReadPaddingTag(br);
+
+                for (int j = 0; j < list0Count; j++)
+                {
+                    var t = Utils.BytesToStruct<BUPTable>(br);
+                    if (t.Offset == 0) continue;
+                    record.list0.Add(t);
+                }
+                for (int j = 0; j < list1Count; j++)
+                {
+                    var t = Utils.BytesToStruct<BUPTable>(br);
+                    if (t.Offset == 0) continue;
+                    record.list1.Add(t);
+                }
+
+                records.Add(record);
+                br.BaseStream.Position = startPos + size;
+            }
+            return records;
+        }
 
         private byte[] DecodeLayer(BinaryReader br, BUPTable table, BUPLayerHeader layer)
         {
@@ -191,6 +267,16 @@ namespace PicTool
 
                 canvas.Save(outPath, ImageFormat.Png);
             }
+        }
+
+        private string GuessAuxTag(string filepath)
+        {
+            string name = Path.GetFileNameWithoutExtension(filepath);
+            int pos = name.LastIndexOf('_');
+            if (pos >= 0 && pos + 1 < name.Length)
+                return name.Substring(pos + 1);
+
+            return string.Empty;
         }
     }
 
