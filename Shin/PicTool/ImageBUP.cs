@@ -79,7 +79,7 @@ namespace PicTool
                 }
 
                 var header = Utils.BytesToStruct<BUPHeader>(br);
-                var layout = ReadBUPTables(br, header, filepath);   
+                var layout = ReadBUPTables(br, header, filepath);
                 var tables = new List<BUPTable>();
 
                 tables.AddRange(layout.RootTables);
@@ -207,15 +207,15 @@ namespace PicTool
 
         private void CombineBUP(BUPHeader header, List<Block> blocks, string outPath)
         {
-            int canvasW = header.BoundR - header.BoundL;
-            int canvasH = header.BoundB - header.BoundT;
+            int canvasW = blocks.Max(b => b.X + b.W) - blocks.Min(b => b.X);
+            int canvasH = blocks.Max(b => b.Y + b.H) - blocks.Min(b => b.Y);
 
             using (Bitmap canvas = new Bitmap(canvasW, canvasH, PixelFormat.Format32bppArgb))
             {
                 foreach (var block in blocks)
                 {
-                    int dstX = block.X - header.BoundL;
-                    int dstY = block.Y - header.BoundT;
+                    int dstX = block.X - blocks.Min(b => b.X);
+                    int dstY = block.Y - blocks.Min(b => b.Y);
                     int srcX = 0;
                     int srcY = 0;
 
