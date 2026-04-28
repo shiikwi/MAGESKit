@@ -7,9 +7,18 @@ namespace ScriptTool
     {
         private static void Main(string[] args)
         {
-            string inFile = "main.snr";
-            var snr = new ScriptSnr();
-            snr.ParseExport(inFile);
+            var inFile = Path.GetFileName(args[0]);
+            if (inFile == "main.snr")
+            {
+                var snr = new ScriptSnr();
+                snr.ParseExport(inFile);
+            }
+            else if (inFile == "default.fnt")
+            {
+                var fnt = new FontFNT();
+                fnt.MapFont(inFile);
+            }
+
         }
     }
 }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlTypes;
-using System.Text;
+﻿using System.Text;
 
 namespace ScriptTool
 {
@@ -49,6 +46,18 @@ namespace ScriptTool
             }
 
             return Encoding.UTF8.GetString(result.ToArray(), 0, finalLen);
+        }
+
+        public static string? TryChar(int codepoint)
+        {
+            try
+            {
+                return char.ConvertFromUtf32(codepoint);
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 

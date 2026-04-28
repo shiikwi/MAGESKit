@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO.Compression;
-using System.Text;
-using static System.Net.Mime.MediaTypeNames;
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Encodings.Web;
 
 namespace ScriptTool
 {
@@ -47,8 +50,9 @@ namespace ScriptTool
 
         public void MapFont(string fntpath)
         {
-            var outDir = Path.Combine(Path.GetDirectoryName(fntpath), Path.GetFileNameWithoutExtension(fntpath) + "Unpack");
-            if (!Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
+            //var outDir = Path.Combine(Path.GetDirectoryName(fntpath), Path.GetFileNameWithoutExtension(fntpath) + "Unpack");
+            //if (!Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
+            string outPath = fntpath + ".json";
             using (var fs = new FileStream(fntpath, FileMode.Open))
             using (var br = new BinaryReader(fs))
             {
@@ -61,7 +65,8 @@ namespace ScriptTool
                 }
 
                 var meta = ReadMeta(br);
-                var glyphMasks = DecodeGlyphMasks(br, meta);
+                //var glyphMasks = DecodeGlyphMasks(br, meta);
+                DumpMeta(meta, outPath);
             }
         }
 
@@ -142,7 +147,7 @@ namespace ScriptTool
             for (int i = 0; i < meta.Records.Count; i++)
             {
                 GlyphRecord record = meta.Records[i];
-                if(record.Width == 0 || record.Height == 0 || record.DataOffset == 0 || record.CompressedSize == 0)
+                if (record.Width == 0 || record.Height == 0 || record.DataOffset == 0 || record.CompressedSize == 0)
                 {
                     masks[i] = Array.Empty<byte>();
                     continue;
@@ -164,6 +169,31 @@ namespace ScriptTool
             using var output = new MemoryStream();
             deflate.CopyTo(output);
             return output.ToArray();
+        }
+
+        private void DumpMeta(FntMeta meta, string outPath)
+        {
+            var glyphs = meta.CodepointToGlyph
+                .OrderBy(kv => kv.Key)
+                .Select(kv =>
+                {
+                    int codepoint = kv.Key;
+                    int glyphIndex = kv.Value;
+                    GlyphRecord rec = meta.Records[glyphIndex];
+
+                    return new
+                    {
+                        Codepoint = $"U+{codepoint:X6}",
+                        Character = Utils.TryChar(codepoint),
+                        Width = rec.Width,
+                        Height = rec.Height,
+                        DataOffset = rec.DataOffset
+                    };
+                })
+                .ToList();
+
+            string json = JsonSerializer.Serialize(glyphs, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+            File.WriteAllText(outPath, json);
         }
 
     }
