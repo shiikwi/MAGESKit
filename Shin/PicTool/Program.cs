@@ -25,7 +25,12 @@ namespace PicTool
                 else if (ext == ".bup")
                 {
                     var bup = new ImageBUP();
-                    bup.ConvertBUP((arg));
+                    bup.ConvertBUP(arg);
+                }
+                else if (ext == ".msk")
+                {
+                    var msk = new ImageMSK();
+                    msk.ConvertMSK(arg);
                 }
             }
         }
